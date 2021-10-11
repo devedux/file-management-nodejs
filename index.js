@@ -33,7 +33,65 @@ class Container {
     this.products = products;
   }
 
+  async save(newProduct) {
+    if (!newProduct) {
+      throw new Error('You must send a product object');
+    }
+    
+    IdGenerator.next();
+    newProduct.id = IdGenerator.current();
 
+    try {
+      await Container.#saveProducts(this.path, [...this.products, newProduct]);
+      this.products = [...this.products, newProduct];
+      return newProduct.id;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  getById(productId) {
+    return this.products.find(product => product.id === productId) || null;
+  }
+
+  getAll() {
+    return this.products;
+  }
+
+  async deleteById(id) {
+    const productsFiltered = this.products.filter(product => product.id !== id);
+    try {
+      await Container.#saveProducts(this.path, productsFiltered);
+      this.products = productsFiltered;      
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async deleteAll() {
+    try {
+      await Container.#saveProducts(this.path, []);
+      this.products = []
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  static async #getProducts(path) {
+    const response = await fs.readFileSync(path, 'utf-8');
+    return JSON.parse(response);
+  }
+
+  static async #saveProducts(path, products) {
+    await fs.writeFileSync(path, JSON.stringify(products));
+  }
+
+  static #hasLastId(products) {
+    if (products.length > 0) {
+      const product = products[products.length - 1];
+      IdGenerator.set(product.id);
+    }
+  }
 }
 
 (async function () {
@@ -45,5 +103,14 @@ class Container {
 
   const container = new Container('products');
   await container.init();
-
+  const productId = await container.save(productData);
+  console.log(productId,'productId created');
+  const product = container.getById(productId);
+  console.log(product, 'get product by id');
+  const products = container.getAll();
+  console.log(products, 'get all products');
+  await container.deleteById(productId);
+  console.log(container.getById(productId), 'product deleted');
+  await container.deleteAll();
+  console.log(container.getAll(), 'get all after deleted all');
 })();
