@@ -25,7 +25,7 @@ class Container {
     const existPath = await fs.existsSync(this.path);
 
     if (!existPath) {
-      await fs.writeFileSync(this.path, JSON.stringify(this.products));
+      await Container.#saveProducts(this.path, this.products);
     }
 
     const products = await Container.#getProducts(this.path);
